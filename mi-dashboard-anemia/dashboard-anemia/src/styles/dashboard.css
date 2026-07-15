@@ -1,0 +1,21 @@
+/* src/styles/dashboard.css */
+:root {
+  --color-red: #991b1b;
+  --color-beige: #fef3c7;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: #f9fafb;
+}
+
+.sidebar-btn {
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  border-radius: 8px;
+  transition: background 0.3s;
+}
+
+.sidebar-btn:hover { background-color: #7f1d1d; }
