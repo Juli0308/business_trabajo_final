@@ -1,53 +1,90 @@
-// src/components/MapaCalorPeru.jsx
-import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+  // src/components/MapaCalorPeru.jsx
+  import React, { useEffect, useState } from 'react';
+  import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
+  import L from 'leaflet';
 
-export default function MapaCalorPeru({ geoData }) {
-  if (!geoData) {
-    return <div className="h-96 bg-gray-200 rounded-xl flex items-center justify-center animate-pulse">
-      <p className="text-gray-600">Cargando mapa...</p>
-    </div>;
-  }
+  export default function MapaCalorPeru({ geoData }) {
+    const [features, setFeatures] = useState([]);
 
-  // Estilos para el GeoJSON
-  const onEachFeature = (feature, layer) => {
-    const props = feature.properties;
-    const popupContent = `<div style="font-size:12px"><strong>${props.NOMBDEP || 'Región'}</strong><br/>Prevalencia: 42.5%</div>`;
-    layer.bindPopup(popupContent);
-  };
+    // Función para obtener color según prevalencia
+    const getColorByPrevalence = (prevalencia) => {
+      if (prevalencia > 50) return '#7f1d1d';      // Rojo oscuro - Crítico
+      if (prevalencia > 40) return '#991b1b';      // Rojo medio - Alto
+      if (prevalencia > 30) return '#dc2626';      // Rojo claro - Moderado
+      if (prevalencia > 20) return '#f97316';      // Naranja - Bajo
+      return '#22c55e';                             // Verde - Muy bajo
+    };
 
-  const style = {
-    fillColor: '#b91c1c',
-    weight: 2,
-    opacity: 1,
-    color: '#fff',
-    dashArray: '3',
-    fillOpacity: 0.7
-  };
+    // Función para obtener etiqueta
+    const getLabel = (prevalencia) => {
+      if (prevalencia > 50) return 'CRÍTICO (>50%)';
+      if (prevalencia > 40) return 'ALTO (40-50%)';
+      if (prevalencia > 30) return 'MODERADO (30-40%)';
+      if (prevalencia > 20) return 'BAJO (20-30%)';
+      return 'MUY BAJO (<20%)';
+    };
 
-  // Fix para iconos de Leaflet
-  delete L.Icon.Default.prototype._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  });
+    useEffect(() => {
+      if (geoData && geoData.features) {
+        setFeatures(geoData.features);
+      }
+    }, [geoData]);
 
-  return (
-    <div className="rounded-xl shadow-sm overflow-hidden border border-gray-100">
-      <MapContainer 
-        center={[-9.19, -75.01]} 
-        zoom={5} 
-        style={{ height: '450px', width: '100%' }}
-        className="rounded-xl"
-      >
+    const onEachFeature = (feature, layer) => {
+      const props = feature.properties;
+      const prevalencia = props.prevalencia || 0;
+      const color = getColorByPrevalence(prevalencia);
+
+      // Estilo
+      layer.setStyle({
+        fillColor: color,
+        weight: 2,
+        opacity: 1,
+        color: '#fff',
+        dashArray: '3',
+        fillOpacity: 0.7
+      });
+
+      // Popup con información
+      const popup = `
+        <div style="font-family: Arial; font-size: 12px;">
+          <strong style="font-size: 14px; color: #8B1C1C;">${props.NOMBDEP}</strong><br/>
+          <hr style="margin: 5px 0;"/>
+          <span style="color: #666;">Prevalencia:</span> <strong>${prevalencia.toFixed(1)}%</strong><br/>
+          <span style="color: #666;">Estado:</span> <strong style="color: ${color}">${getLabel(prevalencia)}</strong>
+        </div>
+      `;
+
+      layer.bindPopup(popup);
+      
+      // Hover effect
+      layer.on('mouseover', () => {
+        layer.setStyle({
+          weight: 3,
+          opacity: 1,
+          fillOpacity: 0.9
+        });
+        layer.openPopup();
+      });
+
+      layer.on('mouseout', () => {
+        layer.setStyle({
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.7
+        });
+      });
+    };
+
+    return (
+      <MapContainer center={[-9.19, -75.0152]} zoom={6} style={{ height: '500px', width: '100%' }}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; OpenStreetMap contributors'
         />
-        <GeoJSON data={geoData} style={style} onEachFeature={onEachFeature} />
+        {features.length > 0 && (
+          <GeoJSON data={{ type: 'FeatureCollection', features }} onEachFeature={onEachFeature} />
+        )}
       </MapContainer>
-    </div>
-  );
-}
+    );
+  }
